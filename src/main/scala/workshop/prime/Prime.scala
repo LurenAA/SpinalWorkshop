@@ -11,7 +11,15 @@ object Prime{
   //Should return True when the number is prime.
   def apply(n : UInt) : Bool = {
     //TODO
-    ???
+    val res = False
+    for(value <- 0 to Integer.parseInt("1f", 16)) {
+      if(Prime(value)) {
+        when(n === value) {
+          res :=  True
+        }
+      }
+    }
+    return res
   }
 }
 
