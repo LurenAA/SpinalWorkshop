@@ -57,9 +57,11 @@ case class UartCtrlRx(generics : UartRxGenerics) extends Component{
   val bitCounter = new Area {
     val value = Reg(UInt(3 bits))
     val clear = False
+    val storage = Reg(Bits(8 bit))
 
     when(bitTimer.tick) {
       value := value + 1
+      storage(value) := io.rxd
     }
     when(clear){
       value := 0
@@ -69,5 +71,46 @@ case class UartCtrlRx(generics : UartRxGenerics) extends Component{
   // Statemachine that use all precedent area
   val stateMachine = new Area {
     //TODO state machine
+    object State extends SpinalEnum {
+      val IDLE, START, DATA, STOP = newElement()
+    }
+
+    val stateNext = State()
+    val state = Reg(State())
+
+    switch(state) {
+      is(State.IDLE) {
+        stateNext := (sampler.tick && !sampler.value) ? State.START | State.IDLE
+      }
+      is(State.START) {
+        stateNext := bitTimer.tick ? State.DATA | State.START
+      }
+      is(State.DATA) {
+        stateNext := (bitTimer.tick && bitCounter.value === 7) ? State.STOP | State.DATA
+      }
+      is(State.STOP) {
+        stateNext := bitTimer.tick ? State.IDLE | State.STOP
+      }
+    }
+
+    state := stateNext
+    when(state === State.IDLE && stateNext === State.START) {
+      bitTimer.recenter :=  True
+    }.otherwise {
+      bitTimer.recenter :=  False
+    }
+    
+    when(state === State.START && stateNext === State.DATA) {
+      bitCounter.clear := True
+    }.otherwise{
+      bitCounter.clear := False
+    }
+    
+    io.read.push(bitCounter.storage)
+    when(bitTimer.tick && state === State.STOP) {
+      io.read.valid := True
+    }.otherwise{
+      io.read.valid := False
+    }
   }
 }

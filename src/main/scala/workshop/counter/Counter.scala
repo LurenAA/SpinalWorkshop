@@ -13,5 +13,9 @@ case class Counter(width: Int) extends Component {
   io.full := io.value === (1 << width) - 1
   val register = Reg(UInt(width bits)) init 0
   io.value := register
-  register := Mux(io.clear, U(0), register + 1)
+  // register := Mux(io.clear, U(0), register + 1)
+  register := register + 1
+  when(io.clear) {
+    register := 0
+  }
 }
