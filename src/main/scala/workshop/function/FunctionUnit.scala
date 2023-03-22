@@ -16,7 +16,9 @@ case class FunctionUnit() extends Component{
     val hit = False
     // TODO
     val counter = Reg(UInt(log2Up(9) bits)) init(0)
-    when(io.cmd.valid ) {
+    val passCouter = Reg(UInt(3 bits)) init(0)
+
+    when(io.cmd.valid && passCouter === 0) {
       when(io.cmd.payload === B"8'x73") {
         counter := 1
       }.elsewhen(counter < 8) {
@@ -24,9 +26,20 @@ case class FunctionUnit() extends Component{
       }.otherwise{
         counter := 0
       }
+    }.elsewhen(io.cmd.valid && passCouter > 0) {
+      passCouter := passCouter - 1
+      counter := 0
     }
+
     when(counter === 8 && str(8).toInt === io.cmd.payload) {
       hit := True
+      if(str(8) == 'A') {
+        passCouter := 1
+      } else if(str(8) == 'B') {
+        passCouter := 4
+      } else if(str(8) == 'C') {
+        passCouter := 6
+      }
     }.otherwise{
       hit := False
     }
