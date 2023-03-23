@@ -51,26 +51,46 @@ case class Apb3Decoder(apbConfig : Apb3Config, outputsMapping : Seq[Mapping]) ex
     }
   }
   
-  when(outputsMapping(0).hit(io.input.PADDR)) {
-      io.input.PRDATA := io.outputs(0).PRDATA
-      io.input.PREADY := io.outputs(0).PREADY
-      io.input.PSLVERROR := io.outputs(0).PSLVERROR
-  }.elsewhen(outputsMapping(1).hit(io.input.PADDR)) {
-      io.input.PRDATA := io.outputs(1).PRDATA
-      io.input.PREADY := io.outputs(1).PREADY
-      io.input.PSLVERROR := io.outputs(1).PSLVERROR
-  }.elsewhen(outputsMapping(2).hit(io.input.PADDR)) {
-      io.input.PRDATA := io.outputs(2).PRDATA
-      io.input.PREADY := io.outputs(2).PREADY
-      io.input.PSLVERROR := io.outputs(2).PSLVERROR
-  }.elsewhen(outputsMapping(3).hit(io.input.PADDR)) {
-      io.input.PRDATA := io.outputs(3).PRDATA
-      io.input.PREADY := io.outputs(3).PREADY
-      io.input.PSLVERROR := io.outputs(3).PSLVERROR
-  }.otherwise{
-    io.input.PRDATA := io.outputs(0).PRDATA
-    io.input.PREADY := io.outputs(0).PREADY
-    io.input.PSLVERROR := io.outputs(0).PSLVERROR
-  }
+  val outputsmhot = outputsMapping.map(_.hit(io.input.PADDR))
+  // var idx = 0
+  // for(i <- 0 until outputsMapping.length) {
+  //   if(outputsmhot(i) == True) idx = i
+  // }   
+
+  // val idx1 = Reg(SInt(log2Up(outputsMapping.length) + 1 bits))
+  // val idx = UInt(log2Up(outputsMapping.length) bits)
+  // idx1 := outputsmhot.indexOf(True) 
+  // if(idx1 != -1) {
+  //   idx := idx1.asUInt.resized
+  // } else {
+  //   idx := 0
+  // }
+
+  val idx = OHToUInt(outputsmhot)
+  io.input.PRDATA := io.outputs(idx).PRDATA
+  io.input.PREADY := io.outputs(idx).PREADY
+  io.input.PSLVERROR := io.outputs(idx).PSLVERROR
+
+  // when(outputsMapping(0).hit(io.input.PADDR)) {
+  //     io.input.PRDATA := io.outputs(0).PRDATA
+  //     io.input.PREADY := io.outputs(0).PREADY
+  //     io.input.PSLVERROR := io.outputs(0).PSLVERROR
+  // }.elsewhen(outputsMapping(1).hit(io.input.PADDR)) {
+  //     io.input.PRDATA := io.outputs(1).PRDATA
+  //     io.input.PREADY := io.outputs(1).PREADY
+  //     io.input.PSLVERROR := io.outputs(1).PSLVERROR
+  // }.elsewhen(outputsMapping(2).hit(io.input.PADDR)) {
+  //     io.input.PRDATA := io.outputs(2).PRDATA
+  //     io.input.PREADY := io.outputs(2).PREADY
+  //     io.input.PSLVERROR := io.outputs(2).PSLVERROR
+  // }.elsewhen(outputsMapping(3).hit(io.input.PADDR)) {
+  //     io.input.PRDATA := io.outputs(3).PRDATA
+  //     io.input.PREADY := io.outputs(3).PREADY
+  //     io.input.PSLVERROR := io.outputs(3).PSLVERROR
+  // }.otherwise{
+  //   io.input.PRDATA := io.outputs(0).PRDATA
+  //   io.input.PREADY := io.outputs(0).PREADY
+  //   io.input.PSLVERROR := io.outputs(0).PSLVERROR
+  // }
   //TODO fully asynchronous apb3 decoder
 }
