@@ -30,12 +30,51 @@ case class UdpApp(helloMessage : String,helloPort : Int = 37984) extends Compone
   }
 
   // TODO give default value to rx/tx output pins
+  io.rx.cmd.ready := False
+  io.rx.data.ready := False
+  io.tx.cmd.valid := False
+  // io.tx.cmd.payload := UdpAppCmd()
+  // io.tx.data.payload := Fragment(Bits(8 bits))
+  io.tx.cmd.payload.dstPort := 0
+  io.tx.cmd.payload.ip := 0
+  io.tx.cmd.payload.length := 0
+  io.tx.cmd.payload.srcPort := 0
+  io.tx.data.valid := False
+  io.tx.data.payload.fragment := 0
+  io.tx.data.payload.last := False
+
+  when(io.rx.cmd.valid) {
+    io.tx.cmd.payload.dstPort := io.rx.cmd.payload.srcPort
+    io.tx.cmd.payload.srcPort := io.rx.cmd.payload.dstPort
+    io.tx.cmd.payload.ip := io.rx.cmd.payload.ip
+    io.tx.cmd.payload.length := helloMessage.length() + 1
+  }
+
+  val ok = Reg(Bool) init(True)
 
   val fsm = new StateMachine{
     //Filter rx dst ports
     val idle : State = new State with EntryPoint{
       whenIsActive{
         // TODO Check io.rx.cmd dst port
+        when(io.rx.cmd.dstPort === helloPort && ok && io.rx.cmd.valid) {
+          ok := False
+          goto(helloHeader)
+        }.elsewhen(!ok && io.rx.cmd.valid) {
+          io.rx.cmd.ready := io.rx.data.payload.last
+          io.rx.data.ready := True
+        }
+        .elsewhen(io.rx.cmd.dstPort =/= helloPort && io.rx.cmd.valid ) {
+          io.rx.data.ready := True
+          when(io.rx.data.payload.last) {
+            io.rx.cmd.ready := True
+          }
+        }
+        .otherwise{
+          ok := True
+          
+        }
+        
       }
     }
 
@@ -43,6 +82,14 @@ case class UdpApp(helloMessage : String,helloPort : Int = 37984) extends Compone
     val helloHeader = new State{
       whenIsActive {
         // TODO check that the first byte of the packet payload is equals to Hello.discoveringCmd
+        when(io.rx.data.valid) {
+          when(io.rx.data.payload === Hello.discoveringCmd) {
+            goto(discoveringRspTx)
+          }.otherwise{
+            goto(idle)
+          }
+          
+        }
       }
     }
 
@@ -53,6 +100,9 @@ case class UdpApp(helloMessage : String,helloPort : Int = 37984) extends Compone
     ){
       whenCompleted{
         //TODO return to IDLE
+        ok := True
+        io.rx.cmd.ready := True
+        goto(idle)
       }
     }
   }
@@ -62,6 +112,10 @@ case class UdpApp(helloMessage : String,helloPort : Int = 37984) extends Compone
     val sendCmd = new State with EntryPoint{
       whenIsActive{
         //TODO send one io.tx.cmd transaction
+        io.tx.cmd.valid := True
+        when(io.tx.cmd.ready) {
+          exit()
+        }
       }
     }
   }
@@ -71,6 +125,11 @@ case class UdpApp(helloMessage : String,helloPort : Int = 37984) extends Compone
     val sendHeader = new State with EntryPoint{
       whenIsActive{
         //TODO send the io.tx.cmd header (Hello.discoveringRsp)
+        io.tx.data.valid := True
+        io.tx.data.payload.fragment := Hello.discoveringRsp
+        when(io.tx.data.ready) {
+          goto(sendMessage)
+        }
       }
     }
 
@@ -81,6 +140,21 @@ case class UdpApp(helloMessage : String,helloPort : Int = 37984) extends Compone
       }
       whenIsActive{
         //TODO send the message on io.tx.cmd header
+        io.tx.data.valid := True
+        for(i <- 0 until helloMessage.length()) {
+          when(counter === i) {
+            io.tx.data.payload.fragment := helloMessage(i)
+          }
+        }
+        when(counter === helloMessage.length - 1) {
+          io.tx.data.payload.last := True
+        }
+        when(io.tx.data.ready) {
+          counter := counter + 1
+          when(counter === helloMessage.length - 1) {
+            exit()
+          }
+        }
       }
     }
   }

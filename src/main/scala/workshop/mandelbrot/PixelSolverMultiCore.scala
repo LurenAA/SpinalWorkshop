@@ -70,29 +70,13 @@ case class PixelSolverMultiCore(g : PixelSolverGenerics,coreCount : Int) extends
       pixelSolverArray(idx).io.rsp.ready := io.rsp.ready
       io.rsp.payload := pixelSolverArray(idx).io.rsp.payload
       io.rsp.valid := pixelSolverArray(idx).io.rsp.valid
-      
+
       when(counter === coreCount - 1) {
         counter := 0
       }.otherwise{
         counter := counter + 1
       }
     }
- 
-  //   when(counter === idx) {
-  //     when(pixelSolverArray(idx).io.rsp.valid && !io.rsp.valid) {
-  //       payloadReg := pixelSolverArray(idx).io.rsp.payload
-  //       validReg := True
-  //     }.elsewhen(io.rsp.ready && io.rsp.valid) {
-  //       validReg := False
-
-  //       when(counter === coreCount - 1) {
-  //         counter := 0
-  //       }.otherwise{
-  //         counter := counter + 1
-  //       }
-  //     }
-  //   }
-
   }
 
   //TODO instantiate all components
